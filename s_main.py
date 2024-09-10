@@ -5,7 +5,7 @@ import json
 from typing import Optional, List
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, Response, Form, Body
+from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, Response, Form, Body, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
@@ -56,6 +56,7 @@ def generate_token(user_id):
         'iat': datetime.datetime.utcnow()
     }
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
 
 def verify_token(token: str = Depends(oauth2_scheme)):
     try:
@@ -185,8 +186,8 @@ async def update_tag(
     return "Tag successfully updated."
 
 
-@app.get("/tag")
-async def get_user_tags(uid: str = Depends(verify_token)):
+@app.get("/user-all-tags")
+async def get_all_user_tags(uid: str = Depends(verify_token)):
     res = monConnector.get_tags_by_uid(uid)
     dtr = []
     for r in res:
@@ -199,6 +200,23 @@ async def get_user_tags(uid: str = Depends(verify_token)):
             "description": r["description"]
         })
     return dtr
+
+
+@app.get("/tag")
+async def get_tag(uid: str = Depends(verify_token), url: Optional[str] = Query(None)):
+    url = url_normalize(url)
+    res = monConnector.get_tag(uid, url)
+
+    if not res:
+        return {"Message:": "Operation failed"}
+    return {
+        "uid": res["uid"],
+        "url": res["url"],
+        "title": res["title"],
+        "keywords": res["keywords"],
+        "picture": res["picture"],
+        "description": res["description"]
+    }
 
 
 @app.delete("/tag")
@@ -224,7 +242,7 @@ async def add_keywords(
 @app.delete("/keyword")
 async def delete_keywords(
     uid: str = Depends(verify_token),
-    url: str = Body(...),
+    url: str = Form(...),
     keywords: list[str] = Form(...)
 ):
     url = url_normalize(url)
@@ -232,6 +250,14 @@ async def delete_keywords(
     keywords = [keyword.strip() for keyword in keywords]
     monConnector.remove_keyword(uid, url, keywords)
     return {"message": "Keywords successfully removed."}
+
+
+@app.get("/all-keyword")
+async def get_all_user_keywords(
+        uid: str = Depends(verify_token)
+):
+    res = monConnector.get_all_user_keywords(uid)
+    return res
 
 # endregion
 # region Recommendation

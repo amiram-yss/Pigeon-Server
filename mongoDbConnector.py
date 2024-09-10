@@ -227,6 +227,20 @@ class MongoDbConnector(BaseDbConnector):
             return "Tag was removed from system!"
         return "Keyword was removed from tag!"
 
+
+    def get_all_user_keywords(self, uid: str):
+        try:
+            res: pymongo.cursor.Cursor = self.db["taggings"].find({"uid": uid})
+            # convert to list
+            res = list(res)
+            keywords = []
+            for r in res:
+                keywords.extend(r["keywords"])
+            return keywords
+        except Exception as e:
+            print(e)
+            return
+
     def update_tag(self, uid: str, url: str, n_title: str, img: bytes, description: str):
         try:
             res: list = list(self.db["taggings"].find({"uid": uid, "url": url}))
@@ -301,6 +315,18 @@ class MongoDbConnector(BaseDbConnector):
             res: pymongo.cursor.Cursor = self.db["users"].find({})
             # convert to list
             res = list(res)
+            return res
+        except Exception as e:
+            print(e)
+            return False
+
+    def get_tag(self, uid, url):
+        try:
+            res: list = list(self.db["taggings"].find({"uid": uid, "url": url}))
+            if len(res) == 0:
+                return "Tag not found."
+            res = res[0]
+            res["picture"] = encode_img_to_utf8(res["picture"])
             return res
         except Exception as e:
             print(e)
