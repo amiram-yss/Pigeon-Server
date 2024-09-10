@@ -85,6 +85,21 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         # under the "password" key
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     return {"access_token": generate_token(form_data.username), "token_type": "bearer"}
+
+
+
+#logout method
+blacklisted_tokens = set()
+
+
+def blacklist_token(token: str):
+    blacklisted_tokens.add(token)
+
+
+@app.post("/logout")
+async def logout(token: str = Depends(oauth2_scheme)):
+    blacklist_token(token)
+    return {"detail": "Logged out successfully"}
 # endregion
 # region User CRUD
 
